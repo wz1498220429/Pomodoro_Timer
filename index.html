@@ -876,6 +876,8 @@
         let isRunning = false;
         let isBreakMode = false;
         let audioContext = null;
+        let timerStartTime = null;
+        let timerElapsedBeforePause = 0;
 
         const timerDisplay = document.getElementById('timerDisplay');
         const startBtn = document.getElementById('startBtn');
@@ -905,6 +907,12 @@
         progressCircle.style.strokeDashoffset = 0;
 
         function updateDisplay() {
+            if (isRunning && timerStartTime !== null) {
+                const now = Date.now();
+                const totalElapsed = timerElapsedBeforePause + Math.floor((now - timerStartTime) / 1000);
+                timeLeft = Math.max(0, totalTime - totalElapsed);
+            }
+            
             const minutes = Math.floor(timeLeft / 60);
             const seconds = timeLeft % 60;
             const newTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
@@ -1138,6 +1146,8 @@
             const breakTime = parseInt(breakMinutes.value) || 5;
             totalTime = breakTime * 60;
             timeLeft = totalTime;
+            timerStartTime = null;
+            timerElapsedBeforePause = 0;
             updateDisplay();
             skipBtn.style.display = 'inline-block';
             startBtn.textContent = '开始休息';
@@ -1158,6 +1168,8 @@
             const workTime = parseInt(workMinutes.value) || 25;
             totalTime = workTime * 60;
             timeLeft = totalTime;
+            timerStartTime = null;
+            timerElapsedBeforePause = 0;
             updateDisplay();
             skipBtn.style.display = 'none';
             startBtn.textContent = '开始专注';
@@ -1184,6 +1196,7 @@
             
             if (!isRunning) {
                 isRunning = true;
+                timerStartTime = Date.now();
                 startBtn.style.display = 'none';
                 pauseBtn.style.display = 'inline-block';
                 saveBtn.style.display = 'inline-block';
@@ -1194,13 +1207,15 @@
                 }
                 
                 timer = setInterval(() => {
-                    timeLeft--;
                     updateDisplay();
+                    saveTimerState();
                     
                     if (timeLeft <= 0) {
                         clearInterval(timer);
                         timer = null;
                         isRunning = false;
+                        timerStartTime = null;
+                        timerElapsedBeforePause = 0;
                         
                         if (!isBreakMode) {
                             switchToBreak();
@@ -1212,16 +1227,18 @@
                         pauseBtn.style.display = 'none';
                         saveBtn.style.display = 'none';
                         clearTimerState();
-                    } else {
-                        saveTimerState();
                     }
-                }, 1000);
+                }, 500);
             }
         }
 
         function pauseTimer() {
             if (isRunning) {
                 clearInterval(timer);
+                timer = null;
+                const now = Date.now();
+                timerElapsedBeforePause += Math.floor((now - timerStartTime) / 1000);
+                timerStartTime = null;
                 isRunning = false;
                 startBtn.style.display = 'inline-block';
                 pauseBtn.style.display = 'none';
@@ -1260,8 +1277,11 @@
             }
             
             clearInterval(timer);
+            timer = null;
             isRunning = false;
             isBreakMode = false;
+            timerStartTime = null;
+            timerElapsedBeforePause = 0;
             const workTime = parseInt(workMinutes.value) || 25;
             totalTime = workTime * 60;
             timeLeft = totalTime;
@@ -1283,8 +1303,11 @@
 
         function resetTimer() {
             clearInterval(timer);
+            timer = null;
             isRunning = false;
             isBreakMode = false;
+            timerStartTime = null;
+            timerElapsedBeforePause = 0;
             const workTime = parseInt(workMinutes.value) || 25;
             totalTime = workTime * 60;
             timeLeft = totalTime;
@@ -1311,7 +1334,10 @@
 
         function skipBreak() {
             clearInterval(timer);
+            timer = null;
             isRunning = false;
+            timerStartTime = null;
+            timerElapsedBeforePause = 0;
             switchToFocus();
             startBtn.style.display = 'inline-block';
             pauseBtn.style.display = 'none';
@@ -1325,7 +1351,9 @@
                 isRunning,
                 isBreakMode,
                 task: taskName.value.trim(),
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                timerElapsedBeforePause,
+                timerStartTime: timerStartTime
             };
             localStorage.setItem('timerState', JSON.stringify(state));
             const currentTask = taskName.value.trim();
@@ -1350,6 +1378,8 @@
                 timeLeft = Math.max(0, state.timeLeft - elapsed);
                 totalTime = state.totalTime;
                 isBreakMode = state.isBreakMode;
+                timerElapsedBeforePause = state.timerElapsedBeforePause || 0;
+                timerStartTime = state.timerStartTime || null;
                 
                 if (state.task) {
                     taskName.value = state.task;
