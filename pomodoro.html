@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>番茄钟</title>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --container-bg: rgba(255, 255, 255, 0.98);
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --text-tertiary: #4a5568;
+            --input-border: #e2e8f0;
+            --input-focus: #667eea;
+            --circle-bg: #e2e8f0;
+            --focus-color: #667eea;
+            --focus-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --break-color: #48bb78;
+            --break-gradient: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            --stats-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --stat-item-bg: rgba(255, 255, 255, 0.15);
+            --history-item-bg: rgba(255, 255, 255, 0.1);
+            --chart-bar: rgba(255, 255, 255, 0.85);
+            --shadow-1: 0 10px 40px rgba(0, 0, 0, 0.15);
+            --shadow-2: 0 6px 20px rgba(0, 0, 0, 0.12);
+            --shadow-3: 0 2px 8px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 25px 70px rgba(0, 0, 0, 0.2), 0 15px 40px rgba(0, 0, 0, 0.15), 0 5px 15px rgba(0, 0, 0, 0.1);
+            --btn-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            --btn-hover-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .dark-theme {
+            --bg-gradient: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            --container-bg: rgba(26, 26, 46, 0.98);
+            --text-primary: #e2e8f0;
+            --text-secondary: #a0aec0;
+            --text-tertiary: #cbd5e0;
+            --input-border: #4a5568;
+            --input-focus: #667eea;
+            --circle-bg: #2d3748;
+            --focus-color: #667eea;
+            --focus-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --break-color: #48bb78;
+            --break-gradient: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            --stats-bg: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            --stat-item-bg: rgba(255, 255, 255, 0.08);
+            --history-item-bg: rgba(255, 255, 255, 0.05);
+            --chart-bar: rgba(102, 126, 234, 0.85);
+            --shadow-1: 0 10px 40px rgba(0, 0, 0, 0.4);
+            --shadow-2: 0 6px 20px rgba(0, 0, 0, 0.35);
+            --shadow-3: 0 2px 8px rgba(0, 0, 0, 0.25);
+            --shadow-hover: 0 25px 70px rgba(0, 0, 0, 0.5), 0 15px 40px rgba(0, 0, 0, 0.4), 0 5px 15px rgba(0, 0, 0, 0.3);
+            --btn-shadow: 0 4px 15px rgba(102, 126, 234, 0.25);
+            --btn-hover-shadow: 0 8px 25px rgba(102, 126, 234, 0.35);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            transition: background 0.5s ease;
+            line-height: 1.6;
+            letter-spacing: 0.3px;
+        }
+
+        .container {
+            background: var(--container-bg);
+            border-radius: 24px;
+            padding: 40px 35px;
+            box-shadow: var(--shadow-1), var(--shadow-2), var(--shadow-3);
+            max-width: 520px;
+            width: 100%;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .container:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--text-primary);
+            font-size: 2.2em;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .theme-toggle {
+            background: var(--stat-item-bg);
+            border: none;
+            font-size: 1.4em;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 50%;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            background: var(--focus-color);
+            transform: rotate(180deg) scale(1.1);
+            opacity: 0.9;
+        }
+
+        .date-display {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 1em;
+            margin-bottom: 20px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .task-input {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .task-input label {
+            color: var(--text-tertiary);
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .task-input input {
+            flex: 1;
+            max-width: 220px;
+            padding: 12px 16px;
+            border: 2px solid var(--input-border);
+            border-radius: 12px;
+            font-size: 1em;
+            background: var(--container-bg);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .task-input input:hover {
+            border-color: #cbd5e0;
+        }
+
+        .task-input input:focus {
+            outline: none;
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+            transform: scale(1.02);
+        }
+
+        .current-task {
+            text-align: center;
+            color: var(--focus-color);
+            font-size: 1.1em;
+            font-weight: 600;
+            margin: 12px 0;
+            min-height: 28px;
+            transition: color 0.3s ease;
+        }
+
+        .current-task.break-task {
+            color: var(--break-color);
+        }
+
+        .timer-display {
+            text-align: center;
+            margin: 25px 0;
+            position: relative;
+        }
+
+        .progress-ring {
+            margin: 0 auto;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        .time {
+            font-size: 5em;
+            font-weight: 800;
+            color: var(--focus-color);
+            font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+            text-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: color 0.4s ease, text-shadow 0.4s ease;
+            letter-spacing: 2px;
+        }
+
+        .time.break-time {
+            color: var(--break-color);
+            text-shadow: 0 2px 8px rgba(72, 187, 120, 0.2);
+        }
+
+        .timer-mode {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 1.15em;
+            color: var(--text-secondary);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: color 0.3s ease;
+        }
+
+        .timer-mode.break-mode {
+            color: var(--break-color);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 25px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 14px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            min-width: 110px;
+        }
+
+        .btn:focus {
+            outline: none;
+        }
+
+        .btn-start {
+            background: var(--focus-gradient);
+            color: white;
+            box-shadow: var(--btn-shadow);
+        }
+
+        .btn-start:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: var(--btn-hover-shadow);
+            opacity: 0.95;
+        }
+
+        .btn-start:active {
+            transform: translateY(-1px) scale(1.01);
+        }
+
+        .btn-pause {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(237, 137, 54, 0.3);
+        }
+
+        .btn-pause:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 8px 25px rgba(237, 137, 54, 0.4);
+            opacity: 0.95;
+        }
+
+        .btn-reset {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 2px solid var(--input-border);
+            box-shadow: none;
+        }
+
+        .btn-reset:hover {
+            border-color: var(--text-secondary);
+            background: var(--stat-item-bg);
+            transform: translateY(-3px) scale(1.03);
+            opacity: 0.85;
+        }
+
+        .btn-skip {
+            background: var(--break-gradient);
+            color: white;
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
+        }
+
+        .btn-skip:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 8px 25px rgba(72, 187, 120, 0.4);
+            opacity: 0.95;
+        }
+
+        .settings {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .setting-item label {
+            color: var(--text-tertiary);
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .setting-item input {
+            width: 70px;
+            padding: 10px;
+            border: 2px solid var(--input-border);
+            border-radius: 10px;
+            font-size: 1em;
+            text-align: center;
+            background: var(--container-bg);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .setting-item input:hover {
+            border-color: #cbd5e0;
+        }
+
+        .setting-item input:focus {
+            outline: none;
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+            transform: scale(1.05);
+        }
+
+        .stats {
+            background: var(--stats-bg);
+            border-radius: 18px;
+            padding: 25px;
+            margin-top: 25px;
+            color: white;
+        }
+
+        .stats h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .stat-item {
+            background: var(--stat-item-bg);
+            padding: 18px;
+            border-radius: 14px;
+            text-align: center;
+            transition: transform 0.3s ease, background 0.3s ease;
+        }
+
+        .stat-item:hover {
+            transform: scale(1.03);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 1.7em;
+            font-weight: 700;
+        }
+
+        .chart-container {
+            margin-top: 20px;
+            padding: 18px;
+            background: var(--stat-item-bg);
+            border-radius: 14px;
+        }
+
+        .chart-title {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1em;
+            font-weight: 600;
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            height: 140px;
+            gap: 6px;
+        }
+
+        .bar-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .bar {
+            width: 100%;
+            background: var(--chart-bar);
+            border-radius: 6px 6px 0 0;
+            min-height: 4px;
+            transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .bar-label {
+            font-size: 0.7em;
+            opacity: 0.85;
+            font-weight: 500;
+        }
+
+        .bar-value {
+            font-size: 0.75em;
+            font-weight: 700;
+        }
+
+        .history {
+            margin-top: 20px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .history::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .history::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .history::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        .history-item {
+            background: var(--history-item-bg);
+            padding: 12px 15px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        .history-item:hover {
+            transform: translateX(3px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .history-date {
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .history-stats {
+            font-size: 0.85em;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        .history-task {
+            font-size: 0.8em;
+            opacity: 0.75;
+            margin-top: 4px;
+        }
+
+        .date-picker {
+            margin-top: 20px;
+            padding: 18px;
+            background: var(--stat-item-bg);
+            border-radius: 14px;
+        }
+
+        .date-picker-title {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1em;
+            font-weight: 600;
+        }
+
+        .date-picker-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .date-picker-controls input {
+            padding: 10px 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            font-size: 0.95em;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .date-picker-controls input::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
+        .date-picker-controls input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .date-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .date-stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .date-stat-label {
+            font-size: 0.8em;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .date-stat-value {
+            font-size: 1.4em;
+            font-weight: 700;
+        }
+
+        .pie-chart-container {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+
+        .pie-chart-title {
+            text-align: center;
+            margin-bottom: 12px;
+            font-size: 0.95em;
+            font-weight: 600;
+        }
+
+        .pie-chart-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .pie-chart-svg {
+            flex-shrink: 0;
+        }
+
+        .pie-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .pie-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85em;
+        }
+
+        .pie-legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .pie-legend-text {
+            font-weight: 500;
+        }
+
+        .pie-legend-value {
+            opacity: 0.8;
+            font-size: 0.9em;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 20px;
+            opacity: 0.7;
+            font-size: 0.95em;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 15px;
+                align-items: flex-start;
+                padding-top: 30px;
+            }
+
+            .container {
+                padding: 30px 20px;
+                border-radius: 20px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .progress-ring {
+                width: 260px;
+                height: 260px;
+            }
+
+            .time {
+                font-size: 4em;
+            }
+
+            .controls {
+                gap: 10px;
+            }
+
+            .btn {
+                padding: 14px 22px;
+                font-size: 0.95em;
+                min-width: 100px;
+            }
+
+            .settings {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .stats {
+                padding: 20px 15px;
+            }
+
+            .stats-grid {
+                gap: 12px;
+            }
+
+            .stat-item {
+                padding: 15px;
+            }
+
+            .stat-value {
+                font-size: 1.5em;
+            }
+
+            .bar-chart {
+                height: 120px;
+            }
+
+            .pie-chart-wrapper {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .pie-legend {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .container {
+                padding: 25px 15px;
+            }
+
+            h1 {
+                font-size: 1.6em;
+            }
+
+            .progress-ring {
+                width: 240px;
+                height: 240px;
+            }
+
+            .time {
+                font-size: 3.5em;
+            }
+
+            .btn {
+                padding: 12px 18px;
+                font-size: 0.9em;
+                min-width: 90px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div></div>
+            <h1>🍅 番茄钟</h1>
+            <button class="theme-toggle" id="themeToggle" title="切换主题">🌙</button>
+        </div>
+        <div class="date-display" id="currentDate"></div>
+        
+        <div class="task-input">
+            <label for="taskName">任务名称：</label>
+            <input type="text" id="taskName" placeholder="输入当前任务...">
+        </div>
+        <div class="current-task" id="currentTaskDisplay"></div>
+
+        <div class="timer-display">
+            <svg class="progress-ring" width="300" height="300">
+                <circle
+                    cx="150"
+                    cy="150"
+                    r="130"
+                    fill="none"
+                    stroke="var(--circle-bg)"
+                    stroke-width="10"
+                />
+                <circle
+                    id="progressCircle"
+                    cx="150"
+                    cy="150"
+                    r="130"
+                    fill="none"
+                    stroke="var(--focus-color)"
+                    stroke-width="10"
+                    stroke-linecap="round"
+                    stroke-dasharray="816.81"
+                    stroke-dashoffset="0"
+                    transform="rotate(-90 150 150)"
+                    style="transition: stroke-dashoffset 0.5s ease, stroke 0.4s ease;"
+                />
+            </svg>
+            <div class="time" id="timerDisplay">25:00</div>
+        </div>
+        <div class="timer-mode" id="timerMode">专注模式</div>
+
+        <div class="controls">
+            <button class="btn btn-start" id="startBtn">开始专注</button>
+            <button class="btn btn-pause" id="pauseBtn" style="display: none;">暂停</button>
+            <button class="btn btn-reset" id="resetBtn">重置</button>
+            <button class="btn btn-skip" id="skipBtn" style="display: none;">跳过休息</button>
+        </div>
+
+        <div class="settings">
+            <div class="setting-item">
+                <label for="workMinutes">专注时长：</label>
+                <input type="number" id="workMinutes" min="1" max="120" value="25">
+            </div>
+            <div class="setting-item">
+                <label for="breakMinutes">休息时长：</label>
+                <input type="number" id="breakMinutes" min="1" max="60" value="5">
+            </div>
+        </div>
+
+        <div class="stats">
+            <h2>📊 今日学习统计</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">番茄钟数量</div>
+                    <div class="stat-value" id="pomodoroCount">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">学习时长</div>
+                    <div class="stat-value" id="studyTime">0分钟</div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">📈 近7天番茄钟数量</div>
+                <div class="bar-chart" id="barChart"></div>
+            </div>
+
+            <div class="history" id="historyList"></div>
+
+            <div class="date-picker">
+                <div class="date-picker-title">📅 日期数据统计</div>
+                <div class="date-picker-controls">
+                    <input type="date" id="datePickerInput">
+                </div>
+                <div class="date-stats" id="dateStats">
+                    <div class="date-stat-item">
+                        <div class="date-stat-label">番茄钟数量</div>
+                        <div class="date-stat-value" id="datePomodoroCount">0</div>
+                    </div>
+                    <div class="date-stat-item">
+                        <div class="date-stat-label">学习时长</div>
+                        <div class="date-stat-value" id="dateStudyTime">0分钟</div>
+                    </div>
+                </div>
+                <div class="pie-chart-container" id="pieChartContainer">
+                    <div class="pie-chart-title">🥧 任务时间分布</div>
+                    <div class="pie-chart-wrapper" id="pieChartWrapper">
+                        <div class="no-data">暂无数据</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let timer = null;
+        let timeLeft = 25 * 60;
+        let totalTime = 25 * 60;
+        let isRunning = false;
+        let isBreakMode = false;
+        let animationFrame = null;
+        let lastUpdateTime = Date.now();
+
+        const timerDisplay = document.getElementById('timerDisplay');
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const skipBtn = document.getElementById('skipBtn');
+        const workMinutes = document.getElementById('workMinutes');
+        const breakMinutes = document.getElementById('breakMinutes');
+        const currentDate = document.getElementById('currentDate');
+        const pomodoroCount = document.getElementById('pomodoroCount');
+        const studyTime = document.getElementById('studyTime');
+        const historyList = document.getElementById('historyList');
+        const progressCircle = document.getElementById('progressCircle');
+        const timerMode = document.getElementById('timerMode');
+        const taskName = document.getElementById('taskName');
+        const currentTaskDisplay = document.getElementById('currentTaskDisplay');
+        const themeToggle = document.getElementById('themeToggle');
+        const barChart = document.getElementById('barChart');
+        const datePickerInput = document.getElementById('datePickerInput');
+        const datePomodoroCount = document.getElementById('datePomodoroCount');
+        const dateStudyTime = document.getElementById('dateStudyTime');
+        const pieChartWrapper = document.getElementById('pieChartWrapper');
+
+        const circumference = 2 * Math.PI * 130;
+        progressCircle.style.strokeDasharray = circumference;
+        progressCircle.style.strokeDashoffset = 0;
+
+        function updateDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            const newTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            if (timerDisplay.textContent !== newTime) {
+                timerDisplay.style.transition = 'opacity 0.15s ease, transform 0.15s ease';
+                timerDisplay.style.opacity = '0.6';
+                timerDisplay.style.transform = 'translate(-50%, -50%) scale(0.97)';
+                setTimeout(() => {
+                    timerDisplay.textContent = newTime;
+                    timerDisplay.style.opacity = '1';
+                    timerDisplay.style.transform = 'translate(-50%, -50%) scale(1)';
+                }, 150);
+            }
+            
+            const elapsed = totalTime - timeLeft;
+            const progress = elapsed / totalTime;
+            const offset = circumference * (1 - progress);
+            progressCircle.style.strokeDashoffset = offset;
+        }
+
+        function updateCurrentDate() {
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            currentDate.textContent = now.toLocaleDateString('zh-CN', options);
+        }
+
+        function getTodayKey() {
+            const now = new Date();
+            return now.toISOString().split('T')[0];
+        }
+
+        function getStats() {
+            const stats = JSON.parse(localStorage.getItem('pomodoroStats') || '{}');
+            const today = getTodayKey();
+            return stats[today] || { count: 0, minutes: 0, tasks: [] };
+        }
+
+        function saveStats(minutes, task) {
+            const stats = JSON.parse(localStorage.getItem('pomodoroStats') || '{}');
+            const today = getTodayKey();
+            if (!stats[today]) {
+                stats[today] = { count: 0, minutes: 0, tasks: [] };
+            }
+            stats[today].count += 1;
+            stats[today].minutes += minutes;
+            if (task) {
+                stats[today].tasks.push({
+                    name: task,
+                    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+                });
+            }
+            localStorage.setItem('pomodoroStats', JSON.stringify(stats));
+            updateStatsDisplay();
+            updateHistory();
+            updateBarChart();
+        }
+
+        function updateStatsDisplay() {
+            const todayStats = getStats();
+            pomodoroCount.textContent = todayStats.count;
+            const hours = Math.floor(todayStats.minutes / 60);
+            const mins = todayStats.minutes % 60;
+            studyTime.textContent = hours > 0 ? `${hours}小时${mins}分钟` : `${mins}分钟`;
+        }
+
+        function updateHistory() {
+            const stats = JSON.parse(localStorage.getItem('pomodoroStats') || '{}');
+            const dates = Object.keys(stats).sort().reverse().slice(0, 7);
+            
+            historyList.innerHTML = dates.map(date => {
+                const data = stats[date];
+                const hours = Math.floor(data.minutes / 60);
+                const mins = data.minutes % 60;
+                const timeStr = hours > 0 ? `${hours}小时${mins}分钟` : `${mins}分钟`;
+                const tasks = data.tasks || [];
+                const taskList = tasks.length > 0 ? tasks.map(t => t.name).join(', ') : '无任务记录';
+                return `
+                    <div class="history-item">
+                        <div>
+                            <div class="history-date">${date}</div>
+                            <div class="history-task">${taskList}</div>
+                        </div>
+                        <span class="history-stats">${data.count}个番茄 | ${timeStr}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateBarChart() {
+            const stats = JSON.parse(localStorage.getItem('pomodoroStats') || '{}');
+            const dates = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                dates.push(d.toISOString().split('T')[0]);
+            }
+
+            const maxCount = Math.max(...dates.map(d => (stats[d] || {}).count || 0), 1);
+
+            barChart.innerHTML = dates.map(date => {
+                const count = (stats[date] || {}).count || 0;
+                const height = (count / maxCount) * 110;
+                const dayName = new Date(date).toLocaleDateString('zh-CN', { weekday: 'short' });
+                return `
+                    <div class="bar-item">
+                        <div class="bar-value">${count}</div>
+                        <div class="bar" style="height: ${height}px;"></div>
+                        <div class="bar-label">${dayName}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function playNotificationSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            const playTone = (freq, startTime, duration) => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(freq, startTime);
+                
+                gainNode.gain.setValueAtTime(0, startTime);
+                gainNode.gain.linearRampToValueAtTime(0.15, startTime + 0.05);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                
+                oscillator.start(startTime);
+                oscillator.stop(startTime + duration);
+            };
+
+            const now = audioContext.currentTime;
+            playTone(523.25, now, 0.4);
+            playTone(659.25, now + 0.2, 0.4);
+            playTone(783.99, now + 0.4, 0.5);
+        }
+
+        function sendNotification(message) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('🍅 番茄钟', {
+                    body: message,
+                    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🍅</text></svg>'
+                });
+            }
+        }
+
+        function requestNotificationPermission() {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+
+        function switchToBreak() {
+            const minutesUsed = Math.round(totalTime / 60);
+            const currentTask = taskName.value.trim();
+            saveStats(minutesUsed, currentTask);
+            playNotificationSound();
+            sendNotification('专注完成！开始休息一下吧~');
+            
+            timerMode.textContent = '休息模式';
+            timerMode.classList.add('break-mode');
+            timerDisplay.classList.add('break-time');
+            currentTaskDisplay.classList.add('break-task');
+            progressCircle.style.stroke = 'var(--break-color)';
+            
+            isBreakMode = true;
+            const breakTime = parseInt(breakMinutes.value) || 5;
+            totalTime = breakTime * 60;
+            timeLeft = totalTime;
+            updateDisplay();
+            skipBtn.style.display = 'inline-block';
+            startBtn.textContent = '开始休息';
+        }
+
+        function switchToFocus() {
+            playNotificationSound();
+            sendNotification('休息结束！准备开始新的专注吧~');
+            
+            timerMode.textContent = '专注模式';
+            timerMode.classList.remove('break-mode');
+            timerDisplay.classList.remove('break-time');
+            currentTaskDisplay.classList.remove('break-task');
+            progressCircle.style.stroke = 'var(--focus-color)';
+            
+            isBreakMode = false;
+            const workTime = parseInt(workMinutes.value) || 25;
+            totalTime = workTime * 60;
+            timeLeft = totalTime;
+            updateDisplay();
+            skipBtn.style.display = 'none';
+            startBtn.textContent = '开始专注';
+        }
+
+        function startTimer() {
+            requestNotificationPermission();
+            
+            if (!isRunning) {
+                isRunning = true;
+                startBtn.style.display = 'none';
+                pauseBtn.style.display = 'inline-block';
+                
+                const currentTask = taskName.value.trim();
+                if (currentTask && !isBreakMode) {
+                    currentTaskDisplay.textContent = `当前任务：${currentTask}`;
+                }
+                
+                lastUpdateTime = Date.now();
+                
+                timer = setInterval(() => {
+                    const now = Date.now();
+                    const elapsed = Math.floor((now - lastUpdateTime) / 1000);
+                    
+                    if (elapsed >= 1) {
+                        timeLeft = Math.max(0, timeLeft - elapsed);
+                        lastUpdateTime = now;
+                        updateDisplay();
+                        saveTimerState();
+                    }
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(timer);
+                        isRunning = false;
+                        
+                        if (!isBreakMode) {
+                            switchToBreak();
+                        } else {
+                            switchToFocus();
+                        }
+                        
+                        startBtn.style.display = 'inline-block';
+                        pauseBtn.style.display = 'none';
+                        clearTimerState();
+                    }
+                }, 100);
+            }
+        }
+
+        function pauseTimer() {
+            if (isRunning) {
+                clearInterval(timer);
+                isRunning = false;
+                startBtn.style.display = 'inline-block';
+                pauseBtn.style.display = 'none';
+                startBtn.textContent = isBreakMode ? '继续休息' : '继续专注';
+                saveTimerState();
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timer);
+            isRunning = false;
+            isBreakMode = false;
+            const workTime = parseInt(workMinutes.value) || 25;
+            totalTime = workTime * 60;
+            timeLeft = totalTime;
+            
+            timerMode.textContent = '专注模式';
+            timerMode.classList.remove('break-mode');
+            timerDisplay.classList.remove('break-time');
+            currentTaskDisplay.classList.remove('break-task');
+            progressCircle.style.stroke = 'var(--focus-color)';
+            
+            updateDisplay();
+            startBtn.style.display = 'inline-block';
+            pauseBtn.style.display = 'none';
+            skipBtn.style.display = 'none';
+            startBtn.textContent = '开始专注';
+            currentTaskDisplay.textContent = '';
+            clearTimerState();
+        }
+
+        function skipBreak() {
+            clearInterval(timer);
+            isRunning = false;
+            switchToFocus();
+            startBtn.style.display = 'inline-block';
+            pauseBtn.style.display = 'none';
+            clearTimerState();
+        }
+
+        function saveTimerState() {
+            const state = {
+                timeLeft,
+                totalTime,
+                isRunning,
+                isBreakMode,
+                task: taskName.value.trim(),
+                timestamp: Date.now()
+            };
+            localStorage.setItem('timerState', JSON.stringify(state));
+        }
+
+        function loadTimerState() {
+            const stateStr = localStorage.getItem('timerState');
+            if (stateStr) {
+                const state = JSON.parse(stateStr);
+                const elapsed = Math.floor((Date.now() - state.timestamp) / 1000);
+                timeLeft = Math.max(0, state.timeLeft - elapsed);
+                totalTime = state.totalTime;
+                isBreakMode = state.isBreakMode;
+                
+                if (state.task) {
+                    taskName.value = state.task;
+                    currentTaskDisplay.textContent = `当前任务：${state.task}`;
+                }
+                
+                if (isBreakMode) {
+                    timerMode.textContent = '休息模式';
+                    timerMode.classList.add('break-mode');
+                    timerDisplay.classList.add('break-time');
+                    currentTaskDisplay.classList.add('break-task');
+                    progressCircle.style.stroke = 'var(--break-color)';
+                    skipBtn.style.display = 'inline-block';
+                    startBtn.textContent = '开始休息';
+                }
+                
+                updateDisplay();
+            }
+        }
+
+        function clearTimerState() {
+            localStorage.removeItem('timerState');
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-theme');
+            const isDark = document.body.classList.contains('dark-theme');
+            themeToggle.textContent = isDark ? '☀️' : '🌙';
+            localStorage.setItem('darkTheme', isDark);
+        }
+
+        function loadTheme() {
+            const isDark = localStorage.getItem('darkTheme') === 'true';
+            if (isDark) {
+                document.body.classList.add('dark-theme');
+                themeToggle.textContent = '☀️';
+            }
+        }
+
+        function initDatePicker() {
+            const today = getTodayKey();
+            datePickerInput.value = today;
+            updateDateStats(today);
+        }
+
+        function updateDateStats(date) {
+            const stats = JSON.parse(localStorage.getItem('pomodoroStats') || '{}');
+            const data = stats[date] || { count: 0, minutes: 0, tasks: [] };
+            
+            datePomodoroCount.textContent = data.count;
+            const hours = Math.floor(data.minutes / 60);
+            const mins = data.minutes % 60;
+            dateStudyTime.textContent = hours > 0 ? `${hours}小时${mins}分钟` : `${mins}分钟`;
+            
+            updatePieChart(data.tasks || []);
+        }
+
+        function updatePieChart(tasks) {
+            if (tasks.length === 0) {
+                pieChartWrapper.innerHTML = '<div class="no-data">暂无数据</div>';
+                return;
+            }
+
+            const taskMap = {};
+            tasks.forEach(task => {
+                const name = task.name || '未命名任务';
+                if (!taskMap[name]) {
+                    taskMap[name] = { count: 0, minutes: 0 };
+                }
+                taskMap[name].count += 1;
+                const workTime = parseInt(workMinutes.value) || 25;
+                taskMap[name].minutes += workTime;
+            });
+
+            const totalMinutes = Object.values(taskMap).reduce((sum, t) => sum + t.minutes, 0);
+            const taskEntries = Object.entries(taskMap).sort((a, b) => b[1].minutes - a[1].minutes);
+
+            const colors = [
+                '#667eea', '#48bb78', '#ed8936', '#e53e3e', 
+                '#9f7aea', '#38b2ac', '#ecc94b', '#4299e1',
+                '#f56565', '#68d391', '#b794f4', '#63b3ed'
+            ];
+
+            let svgContent = '';
+            let legendContent = '';
+            let startAngle = 0;
+            const cx = 70, cy = 70, r = 60;
+
+            taskEntries.forEach(([name, data], index) => {
+                const percentage = data.minutes / totalMinutes;
+                const angle = percentage * 360;
+                const endAngle = startAngle + angle;
+                
+                const startRad = (startAngle - 90) * Math.PI / 180;
+                const endRad = (endAngle - 90) * Math.PI / 180;
+                
+                const x1 = cx + r * Math.cos(startRad);
+                const y1 = cy + r * Math.sin(startRad);
+                const x2 = cx + r * Math.cos(endRad);
+                const y2 = cy + r * Math.sin(endRad);
+                
+                const largeArc = angle > 180 ? 1 : 0;
+                const color = colors[index % colors.length];
+                
+                if (taskEntries.length === 1) {
+                    svgContent += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" opacity="0.85"/>`;
+                } else {
+                    const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+                    svgContent += `<path d="${d}" fill="${color}" opacity="0.85" stroke="rgba(255,255,255,0.3)" stroke-width="1">
+                        <title>${name}: ${data.count}个番茄 (${data.minutes}分钟)</title>
+                    </path>`;
+                }
+
+                const hours = Math.floor(data.minutes / 60);
+                const mins = data.minutes % 60;
+                const timeStr = hours > 0 ? `${hours}h${mins}m` : `${mins}m`;
+                const percentStr = (percentage * 100).toFixed(1);
+                
+                legendContent += `
+                    <div class="pie-legend-item">
+                        <div class="pie-legend-color" style="background: ${color};"></div>
+                        <span class="pie-legend-text">${name}</span>
+                        <span class="pie-legend-value">${data.count}个 (${percentStr}%)</span>
+                    </div>
+                `;
+                
+                startAngle = endAngle;
+            });
+
+            pieChartWrapper.innerHTML = `
+                <svg class="pie-chart-svg" width="140" height="140" viewBox="0 0 140 140">
+                    ${svgContent}
+                </svg>
+                <div class="pie-legend">
+                    ${legendContent}
+                </div>
+            `;
+        }
+
+        startBtn.addEventListener('click', startTimer);
+        pauseBtn.addEventListener('click', pauseTimer);
+        resetBtn.addEventListener('click', resetTimer);
+        skipBtn.addEventListener('click', skipBreak);
+        themeToggle.addEventListener('click', toggleTheme);
+
+        workMinutes.addEventListener('change', () => {
+            if (!isRunning && !isBreakMode) {
+                const workTime = parseInt(workMinutes.value) || 25;
+                totalTime = workTime * 60;
+                timeLeft = totalTime;
+                updateDisplay();
+            }
+        });
+
+        breakMinutes.addEventListener('change', () => {
+            if (!isRunning && isBreakMode) {
+                const breakTime = parseInt(breakMinutes.value) || 5;
+                totalTime = breakTime * 60;
+                timeLeft = totalTime;
+                updateDisplay();
+            }
+        });
+
+        taskName.addEventListener('input', () => {
+            const currentTask = taskName.value.trim();
+            if (currentTask && isRunning && !isBreakMode) {
+                currentTaskDisplay.textContent = `当前任务：${currentTask}`;
+            } else if (!currentTask) {
+                currentTaskDisplay.textContent = '';
+            }
+        });
+
+        loadTheme();
+        loadTimerState();
+        updateCurrentDate();
+        updateStatsDisplay();
+        updateHistory();
+        updateBarChart();
+        initDatePicker();
+        if (!localStorage.getItem('timerState')) {
+            updateDisplay();
+        }
+
+        setInterval(updateCurrentDate, 60000);
+
+        datePickerInput.addEventListener('change', (e) => {
+            updateDateStats(e.target.value);
+        });
+    </script>
+</body>
+</html>
