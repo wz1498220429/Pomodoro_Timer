@@ -642,6 +642,22 @@
             font-size: 0.95em;
         }
 
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
         @media (max-width: 600px) {
             body {
                 padding: 15px;
@@ -859,8 +875,7 @@
         let totalTime = 25 * 60;
         let isRunning = false;
         let isBreakMode = false;
-        let animationFrame = null;
-        let lastUpdateTime = Date.now();
+        let audioContext = null;
 
         const timerDisplay = document.getElementById('timerDisplay');
         const startBtn = document.getElementById('startBtn');
@@ -894,16 +909,7 @@
             const seconds = timeLeft % 60;
             const newTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
             
-            if (timerDisplay.textContent !== newTime) {
-                timerDisplay.style.transition = 'opacity 0.15s ease, transform 0.15s ease';
-                timerDisplay.style.opacity = '0.6';
-                timerDisplay.style.transform = 'translate(-50%, -50%) scale(0.97)';
-                setTimeout(() => {
-                    timerDisplay.textContent = newTime;
-                    timerDisplay.style.opacity = '1';
-                    timerDisplay.style.transform = 'translate(-50%, -50%) scale(1)';
-                }, 150);
-            }
+            timerDisplay.textContent = newTime;
             
             const elapsed = totalTime - timeLeft;
             const progress = elapsed / totalTime;
@@ -946,6 +952,7 @@
             updateStatsDisplay();
             updateHistory();
             updateBarChart();
+            updateDateStats(getTodayKey());
         }
 
         function updateStatsDisplay() {
@@ -1005,30 +1012,99 @@
         }
 
         function playNotificationSound() {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            
-            const playTone = (freq, startTime, duration) => {
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
+            try {
+                if (!audioContext || audioContext.state === 'closed') {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
                 
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
                 
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(freq, startTime);
-                
-                gainNode.gain.setValueAtTime(0, startTime);
-                gainNode.gain.linearRampToValueAtTime(0.15, startTime + 0.05);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
-                
-                oscillator.start(startTime);
-                oscillator.stop(startTime + duration);
-            };
+                const playTone = (freq, startTime, duration) => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(freq, startTime);
+                    
+                    gainNode.gain.setValueAtTime(0.3, startTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                    
+                    oscillator.start(startTime);
+                    oscillator.stop(startTime + duration);
+                };
 
-            const now = audioContext.currentTime;
-            playTone(523.25, now, 0.4);
-            playTone(659.25, now + 0.2, 0.4);
-            playTone(783.99, now + 0.4, 0.5);
+                const now = audioContext.currentTime;
+                playTone(523.25, now, 0.3);
+                playTone(659.25, now + 0.15, 0.3);
+                playTone(783.99, now + 0.3, 0.4);
+                playTone(1046.50, now + 0.45, 0.5);
+            } catch (e) {
+                console.log('Audio playback failed:', e);
+            }
+        }
+
+        function showAlert(message, subtitle) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+                animation: fadeIn 0.3s ease;
+            `;
+            
+            const alertBox = document.createElement('div');
+            alertBox.style.cssText = `
+                background: white;
+                border-radius: 20px;
+                padding: 40px 50px;
+                text-align: center;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                animation: slideUp 0.3s ease;
+            `;
+            
+            const isDark = document.body.classList.contains('dark-theme');
+            if (isDark) {
+                alertBox.style.background = '#1a1a2e';
+                alertBox.style.color = '#e2e8f0';
+            }
+            
+            alertBox.innerHTML = `
+                <div style="font-size: 3em; margin-bottom: 15px;">🍅</div>
+                <div style="font-size: 1.3em; font-weight: 700; margin-bottom: 10px; color: ${isDark ? '#e2e8f0' : '#2d3748'};">${message}</div>
+                <div style="font-size: 0.95em; color: ${isDark ? '#a0aec0' : '#718096'}; margin-bottom: 25px;">${subtitle}</div>
+                <button onclick="this.parentElement.parentElement.remove()" style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border: none;
+                    padding: 12px 35px;
+                    border-radius: 12px;
+                    font-size: 1em;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                ">我知道了</button>
+            `;
+            
+            overlay.appendChild(alertBox);
+            document.body.appendChild(overlay);
+            
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.remove();
+                }
+            });
         }
 
         function sendNotification(message) {
@@ -1050,8 +1126,6 @@
             const minutesUsed = Math.round(totalTime / 60);
             const currentTask = taskName.value.trim();
             saveStats(minutesUsed, currentTask);
-            playNotificationSound();
-            sendNotification('专注完成！开始休息一下吧~');
             
             timerMode.textContent = '休息模式';
             timerMode.classList.add('break-mode');
@@ -1066,12 +1140,13 @@
             updateDisplay();
             skipBtn.style.display = 'inline-block';
             startBtn.textContent = '开始休息';
+            
+            playNotificationSound();
+            sendNotification('专注完成！开始休息一下吧~');
+            showAlert('专注完成！', '开始休息一下吧~');
         }
 
         function switchToFocus() {
-            playNotificationSound();
-            sendNotification('休息结束！准备开始新的专注吧~');
-            
             timerMode.textContent = '专注模式';
             timerMode.classList.remove('break-mode');
             timerDisplay.classList.remove('break-time');
@@ -1085,10 +1160,26 @@
             updateDisplay();
             skipBtn.style.display = 'none';
             startBtn.textContent = '开始专注';
+            
+            const currentTask = taskName.value.trim();
+            if (currentTask) {
+                currentTaskDisplay.textContent = `当前任务：${currentTask}`;
+            }
+            
+            playNotificationSound();
+            sendNotification('休息结束！准备开始新的专注吧~');
+            showAlert('休息结束！', '准备开始新的专注吧~');
         }
 
         function startTimer() {
             requestNotificationPermission();
+            
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
             
             if (!isRunning) {
                 isRunning = true;
@@ -1101,21 +1192,13 @@
                     currentTaskDisplay.textContent = `当前任务：${currentTask}`;
                 }
                 
-                lastUpdateTime = Date.now();
-                
                 timer = setInterval(() => {
-                    const now = Date.now();
-                    const elapsed = Math.floor((now - lastUpdateTime) / 1000);
-                    
-                    if (elapsed >= 1) {
-                        timeLeft = Math.max(0, timeLeft - elapsed);
-                        lastUpdateTime = now;
-                        updateDisplay();
-                        saveTimerState();
-                    }
+                    timeLeft--;
+                    updateDisplay();
                     
                     if (timeLeft <= 0) {
                         clearInterval(timer);
+                        timer = null;
                         isRunning = false;
                         
                         if (!isBreakMode) {
@@ -1128,8 +1211,10 @@
                         pauseBtn.style.display = 'none';
                         saveBtn.style.display = 'none';
                         clearTimerState();
+                    } else {
+                        saveTimerState();
                     }
-                }, 100);
+                }, 1000);
             }
         }
 
@@ -1214,7 +1299,11 @@
             saveBtn.style.display = 'none';
             skipBtn.style.display = 'none';
             startBtn.textContent = '开始专注';
-            currentTaskDisplay.textContent = '';
+            
+            const currentTask = taskName.value.trim();
+            if (currentTask) {
+                currentTaskDisplay.textContent = `当前任务：${currentTask}`;
+            }
             clearTimerState();
         }
 
@@ -1237,6 +1326,18 @@
                 timestamp: Date.now()
             };
             localStorage.setItem('timerState', JSON.stringify(state));
+            const currentTask = taskName.value.trim();
+            if (currentTask) {
+                localStorage.setItem('lastTask', currentTask);
+            }
+        }
+
+        function loadLastTask() {
+            const lastTask = localStorage.getItem('lastTask');
+            if (lastTask) {
+                taskName.value = lastTask;
+                currentTaskDisplay.textContent = `当前任务：${lastTask}`;
+            }
         }
 
         function loadTimerState() {
@@ -1413,14 +1514,17 @@
 
         taskName.addEventListener('input', () => {
             const currentTask = taskName.value.trim();
-            if (currentTask && isRunning && !isBreakMode) {
+            if (currentTask) {
                 currentTaskDisplay.textContent = `当前任务：${currentTask}`;
-            } else if (!currentTask) {
+                localStorage.setItem('lastTask', currentTask);
+            } else {
                 currentTaskDisplay.textContent = '';
+                localStorage.removeItem('lastTask');
             }
         });
 
         loadTheme();
+        loadLastTask();
         loadTimerState();
         updateCurrentDate();
         updateStatsDisplay();
