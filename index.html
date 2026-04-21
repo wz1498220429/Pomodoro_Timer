@@ -945,6 +945,7 @@
             if (task) {
                 stats[today].tasks.push({
                     name: task,
+                    minutes: minutes,
                     time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
                 });
             }
@@ -1247,6 +1248,7 @@
                 if (currentTask) {
                     stats[today].tasks.push({
                         name: currentTask,
+                        minutes: elapsed,
                         time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
                     });
                 }
@@ -1418,8 +1420,7 @@
                     taskMap[name] = { count: 0, minutes: 0 };
                 }
                 taskMap[name].count += 1;
-                const workTime = parseInt(workMinutes.value) || 25;
-                taskMap[name].minutes += workTime;
+                taskMap[name].minutes += (task.minutes || 0);
             });
 
             const totalMinutes = Object.values(taskMap).reduce((sum, t) => sum + t.minutes, 0);
@@ -1437,7 +1438,7 @@
             const cx = 70, cy = 70, r = 60;
 
             taskEntries.forEach(([name, data], index) => {
-                const percentage = data.minutes / totalMinutes;
+                const percentage = totalMinutes > 0 ? data.minutes / totalMinutes : 0;
                 const angle = percentage * 360;
                 const endAngle = startAngle + angle;
                 
@@ -1463,14 +1464,14 @@
 
                 const hours = Math.floor(data.minutes / 60);
                 const mins = data.minutes % 60;
-                const timeStr = hours > 0 ? `${hours}h${mins}m` : `${mins}m`;
+                const timeStr = hours > 0 ? `${hours}小时${mins}分钟` : `${mins}分钟`;
                 const percentStr = (percentage * 100).toFixed(1);
                 
                 legendContent += `
                     <div class="pie-legend-item">
                         <div class="pie-legend-color" style="background: ${color};"></div>
                         <span class="pie-legend-text">${name}</span>
-                        <span class="pie-legend-value">${data.count}个 (${percentStr}%)</span>
+                        <span class="pie-legend-value">${timeStr} (${percentStr}%)</span>
                     </div>
                 `;
                 
