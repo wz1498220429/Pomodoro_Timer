@@ -308,6 +308,18 @@
             opacity: 0.95;
         }
 
+        .btn-save {
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(66, 153, 225, 0.3);
+        }
+
+        .btn-save:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 8px 25px rgba(66, 153, 225, 0.4);
+            opacity: 0.95;
+        }
+
         .settings {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -665,6 +677,11 @@
                 min-width: 100px;
             }
 
+            .controls {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
             .settings {
                 grid-template-columns: 1fr;
                 gap: 12px;
@@ -775,6 +792,7 @@
         <div class="controls">
             <button class="btn btn-start" id="startBtn">开始专注</button>
             <button class="btn btn-pause" id="pauseBtn" style="display: none;">暂停</button>
+            <button class="btn btn-save" id="saveBtn" style="display: none;">保存并重新开始</button>
             <button class="btn btn-reset" id="resetBtn">重置</button>
             <button class="btn btn-skip" id="skipBtn" style="display: none;">跳过休息</button>
         </div>
@@ -847,6 +865,7 @@
         const timerDisplay = document.getElementById('timerDisplay');
         const startBtn = document.getElementById('startBtn');
         const pauseBtn = document.getElementById('pauseBtn');
+        const saveBtn = document.getElementById('saveBtn');
         const resetBtn = document.getElementById('resetBtn');
         const skipBtn = document.getElementById('skipBtn');
         const workMinutes = document.getElementById('workMinutes');
@@ -1075,6 +1094,7 @@
                 isRunning = true;
                 startBtn.style.display = 'none';
                 pauseBtn.style.display = 'inline-block';
+                saveBtn.style.display = 'inline-block';
                 
                 const currentTask = taskName.value.trim();
                 if (currentTask && !isBreakMode) {
@@ -1106,6 +1126,7 @@
                         
                         startBtn.style.display = 'inline-block';
                         pauseBtn.style.display = 'none';
+                        saveBtn.style.display = 'none';
                         clearTimerState();
                     }
                 }, 100);
@@ -1118,9 +1139,59 @@
                 isRunning = false;
                 startBtn.style.display = 'inline-block';
                 pauseBtn.style.display = 'none';
+                saveBtn.style.display = 'none';
                 startBtn.textContent = isBreakMode ? '继续休息' : '继续专注';
                 saveTimerState();
             }
+        }
+
+        function saveAndRestart() {
+            if (!isRunning) return;
+            
+            const elapsed = Math.floor((totalTime - timeLeft) / 60);
+            const currentTask = taskName.value.trim();
+            
+            if (elapsed > 0 && !isBreakMode) {
+                const stats = JSON.parse(localStorage.getItem('pomodoroStats') || '{}');
+                const today = getTodayKey();
+                if (!stats[today]) {
+                    stats[today] = { count: 0, minutes: 0, tasks: [] };
+                }
+                stats[today].count += 1;
+                stats[today].minutes += elapsed;
+                if (currentTask) {
+                    stats[today].tasks.push({
+                        name: currentTask,
+                        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+                    });
+                }
+                localStorage.setItem('pomodoroStats', JSON.stringify(stats));
+                updateStatsDisplay();
+                updateHistory();
+                updateBarChart();
+                initDatePicker();
+            }
+            
+            clearInterval(timer);
+            isRunning = false;
+            isBreakMode = false;
+            const workTime = parseInt(workMinutes.value) || 25;
+            totalTime = workTime * 60;
+            timeLeft = totalTime;
+            
+            timerMode.textContent = '专注模式';
+            timerMode.classList.remove('break-mode');
+            timerDisplay.classList.remove('break-time');
+            currentTaskDisplay.classList.remove('break-task');
+            progressCircle.style.stroke = 'var(--focus-color)';
+            
+            updateDisplay();
+            startBtn.style.display = 'inline-block';
+            pauseBtn.style.display = 'none';
+            saveBtn.style.display = 'none';
+            skipBtn.style.display = 'none';
+            startBtn.textContent = '开始专注';
+            clearTimerState();
         }
 
         function resetTimer() {
@@ -1140,6 +1211,7 @@
             updateDisplay();
             startBtn.style.display = 'inline-block';
             pauseBtn.style.display = 'none';
+            saveBtn.style.display = 'none';
             skipBtn.style.display = 'none';
             startBtn.textContent = '开始专注';
             currentTaskDisplay.textContent = '';
@@ -1316,6 +1388,7 @@
 
         startBtn.addEventListener('click', startTimer);
         pauseBtn.addEventListener('click', pauseTimer);
+        saveBtn.addEventListener('click', saveAndRestart);
         resetBtn.addEventListener('click', resetTimer);
         skipBtn.addEventListener('click', skipBreak);
         themeToggle.addEventListener('click', toggleTheme);
